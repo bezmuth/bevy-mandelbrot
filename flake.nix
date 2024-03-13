@@ -11,21 +11,33 @@
   outputs = inputs:
     inputs.flake-parts.lib.mkFlake { inherit inputs; } {
       systems = import inputs.systems;
-      imports = [
-        inputs.treefmt-nix.flakeModule
-      ];
+      imports = [ inputs.treefmt-nix.flakeModule ];
       perSystem = { config, self', pkgs, lib, system, ... }:
         let
           cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
-          nonRustDeps = [
-            pkgs.libiconv
+          nonRustDeps = with pkgs; [
+            pkg-config
+            udev
+            alsa-lib
+            vulkan-loader
+            xorg.libX11
+            xorg.libXcursor
+            xorg.libXi
+            xorg.libXrandr
+            libxkbcommon
+            wayland
           ];
           rust-toolchain = pkgs.symlinkJoin {
             name = "rust-toolchain";
-            paths = [ pkgs.rustc pkgs.cargo pkgs.cargo-watch pkgs.rust-analyzer pkgs.rustPlatform.rustcSrc ];
+            paths = [
+              pkgs.rustc
+              pkgs.cargo
+              pkgs.cargo-watch
+              pkgs.rust-analyzer
+              pkgs.rustPlatform.rustcSrc
+            ];
           };
-        in
-        {
+        in {
           # Rust package
           packages.default = pkgs.rustPlatform.buildRustPackage {
             inherit (cargoToml.package) name version;
@@ -35,9 +47,7 @@
 
           # Rust dev environment
           devShells.default = pkgs.mkShell {
-            inputsFrom = [
-              config.treefmt.build.devShell
-            ];
+            inputsFrom = [ config.treefmt.build.devShell ];
             shellHook = ''
               # For rust-analyzer 'hover' tooltips to work.
               export RUST_SRC_PATH=${pkgs.rustPlatform.rustLibSrc}
@@ -47,10 +57,7 @@
               just
             '';
             buildInputs = nonRustDeps;
-            nativeBuildInputs = with pkgs; [
-              just
-              rust-toolchain
-            ];
+            nativeBuildInputs = with pkgs; [ just rust-toolchain ];
             RUST_BACKTRACE = 1;
           };
 
